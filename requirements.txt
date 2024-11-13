@@ -1,0 +1,52 @@
+# Core Dependencies
+langchain
+langgraph
+crewai
+pydantic
+
+# Vector Database
+pinecone-client
+
+
+# Graph Database
+neo4j
+py2neo
+
+# Document Processing
+pypdf
+sentence-transformers
+
+# RAG & Retrieval
+
+# API
+requests
+google-api-python-client
+# Async Support
+asyncio
+aiofiles
+nest_asyncio
+
+# Utilities
+graphviz
+python-dotenv
+pyyaml
+tqdm
+markdown
+matplotlib
+pandas
+numpy
+scipy
+pytz
+python-dateutil
+
+# Monitoring & Logging
+loguru
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+hypothesis
