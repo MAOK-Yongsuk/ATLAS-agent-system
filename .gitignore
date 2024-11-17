@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+#.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings
+*.sublime-workspace
+*.sublime-project
+
+# Project specific
+*.log
+logs/
+workflow_graph.png
+workflow_graph.txt
+.coverage
+htmlcov/
+coverage.xml
+.pytest_cache/
+.hypothesis/
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.temp
+
+# Database
+*.sqlite
+*.db
+*.rdb
+
+# Dependencies
+node_modules/
+
+# Configuration
+config/config.local.yaml
+secrets.yaml
+credentials.json
+
+# Generated files
+generated/
+output/
+results/
+temp/
+*.json
+
+# Large media files
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Neo4j
+data/databases/
+data/dbms/
+data/transactions/
+
+# Project s
