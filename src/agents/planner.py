@@ -1,256 +1,212 @@
-from typing import Dict, List
-from datetime import datetime, timedelta
-from src.agents.base_agent import BaseAgent
-from utils.logger import get_logger
+import json
+from typing import Dict
+from src.cors.models import AcademicState
+from src.agents.react import ReActAgent
+from datetime import datetime, timezone, timedelta
+from langgraph.graph import StateGraph, Graph
+# from IPython.display import display, Image
 
-logger = get_logger(__name__)
+class PlannerAgent(ReActAgent):
+  def __init__(self, llm):
+      super().__init__(llm)
+      self.llm = llm
+      # Initialize few shot examples
+      self.few_shot_examples = self._initialize_examples()
+      # Create and compile workflow
+      self.workflow = self.create_graph()
 
-class PlannerAgent(BaseAgent):
-    """Agent for academic planning and schedule optimization"""
-    
-    def get_role(self) -> str:
-        return 'Academic Planning Specialist'
-    
-    def get_goal(self) -> str:
-        return 'Create optimized study plans and schedules for ADHD students'
-    
-    def get_backstory(self) -> str:
-        return """Expert in academic planning with deep understanding of 
-                learning patterns and ADHD-friendly scheduling. Specializes in 
-                creating flexible, engaging study plans that accommodate varying 
-                attention spans and energy levels."""
-    
-    def get_tools(self) -> List[Dict]:
-        """Get planner-specific tools"""
-        return [
-            self.create_tool(
-                func=self.create_study_plan,
-                name="create_study_plan",
-                description="Create personalized ADHD-friendly study plans"
-            ),
-            self.create_tool(
-                func=self.optimize_schedule,
-                name="optimize_schedule",
-                description="Optimize study schedules based on performance patterns"
-            ),
-            self.create_tool(
-                func=self.analyze_workload,
-                name="analyze_workload",
-                description="Analyze and balance academic workload"
-            ),
-            self.create_tool(
-                func=self.generate_milestones,
-                name="generate_milestones",
-                description="Create achievable study milestones and checkpoints"
-            ),
-            self.create_tool(
-                func=self.sync_calendar,
-                name="sync_calendar",
-                description="Synchronize study plans with calendar"
-            )
-        ]
+  def _initialize_examples(self):
+      return [
+          {
+              "input": "Help with exam prep while managing ADHD and football",
+              "thought": "Need to check calendar conflicts and energy patterns",
+              "action": "search_calendar",
+              "observation": "Football match at 6PM, exam tomorrow 9AM",
+              "plan": """ADHD-OPTIMIZED SCHEDULE:
+                  PRE-FOOTBALL (2PM-5PM):
+                  - 3x20min study sprints
+                  - Movement breaks
+                  - Quick rewards after each sprint
 
-    async def create_study_plan(self, params: Dict) -> Dict:
-        """Create personalized study plan with enhanced error handling"""
-        try:
-            if not params or not all(k in params for k in ['subject', 'available_time', 'learning_style', 'adhd_profile']):
-                return {
-                    "status": "error",
-                    "message": "Missing required parameters",
-                    "timestamp": datetime.now().isoformat()
-                }
+                  FOOTBALL MATCH (6PM-8PM):
+                  - Use as dopamine reset
+                  - Formula review during breaks
 
-            prompt = f"""
-            Create a detailed ADHD-friendly study plan considering:
-            Subject: {params['subject']}
-            Available Time: {params['available_time']}
-            Learning Style: {params['learning_style']}
-            ADHD Profile: {params['adhd_profile']}
-            
-            Plan should include:
-            1. Session breakdown with durations (20-30 minute focus periods)
-            2. Strategic break scheduling (frequent, engaging breaks)
-            3. Focus techniques for each session (e.g., Pomodoro, body doubling)
-            4. Clear progress checkpoints
-            5. Reward system for motivation
-            6. Flexibility options for different energy levels
-            7. Distraction management strategies
-            """
-            
-            response = await self.generate_response(prompt)
-            if not response:
-                raise ValueError("Failed to generate study plan")
-                
-            return self._structure_study_plan(response)
-            
-        except Exception as e:
-            logger.error(f"Error creating study plan: {str(e)}")
-            return {
-                "status": "error",
-                "message": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
+                  POST-MATCH (9PM-12AM):
+                  - Environment: Café noise
+                  - 15/5 study/break cycles
+                  - Location changes hourly
 
-    async def optimize_schedule(self, schedule: Dict) -> Dict:
-        """Optimize study schedule with ADHD considerations"""
-        try:
-            prompt = f"""
-            Optimize this schedule for ADHD students considering:
-            Current Schedule: {schedule.get('current', {})}
-            Performance Data: {schedule.get('performance', {})}
-            Energy Patterns: {schedule.get('energy_patterns', [])}
-            
-            Provide:
-            1. Optimized time blocks (25-minute focus sessions)
-            2. Strategic break distributions (5-15 minute breaks)
-            3. Focus technique recommendations
-            4. Backup plans for low-energy days
-            5. Motivation maintenance strategies
-            6. Environment optimization tips
-            """
-            
-            response = await self.generate_response(prompt)
-            return self._parse_schedule_optimization(response)
-            
-        except Exception as e:
-            logger.error(f"Error optimizing schedule: {str(e)}")
-            return {
-                "status": "error",
-                "message": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
+                  EMERGENCY PROTOCOLS:
+                  - Focus lost → jumping jacks
+                  - Overwhelmed → room change
+                  - Brain fog → cold shower"""
+          },
+          {
+              "input": "Struggling with multiple deadlines",
+              "thought": "Check task priorities and performance issues",
+              "action": "analyze_tasks",
+              "observation": "3 assignments due, lowest grade in Calculus",
+              "plan": """PRIORITY SCHEDULE:
+                  HIGH-FOCUS SLOTS:
+                  - Morning: Calculus practice
+                  - Post-workout: Assignments
+                  - Night: Quick reviews
 
-    async def analyze_workload(self, tasks: List[Dict]) -> Dict:
-        """Analyze academic workload with ADHD considerations"""
-        try:
-            prompt = f"""
-            Analyze academic workload for ADHD student:
-            Tasks: {tasks}
-            
-            Provide:
-            1. Task breakdown into manageable chunks
-            2. Priority ordering with urgency/importance matrix
-            3. Effort estimation with focus requirements
-            4. Potential challenges and mitigation strategies
-            5. Required resources and tools
-            6. Recommended focus techniques per task
-            7. Alternative approaches for different energy levels
-            """
-            
-            response = await self.generate_response(prompt)
-            return self._parse_workload_analysis(response)
-            
-        except Exception as e:
-            logger.error(f"Error analyzing workload: {str(e)}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+                  ADHD MANAGEMENT:
+                  - Task timer challenges
+                  - Reward system per completion
+                  - Study buddy accountability"""
+          }
+      ]
 
-    async def generate_milestones(self, plan: Dict) -> List[Dict]:
-        """Generate achievable study milestones"""
-        try:
-            prompt = f"""
-            Create ADHD-friendly milestone plan for:
-            Study Plan: {plan}
-            
-            Include:
-            1. Small, achievable checkpoints
-            2. Clear progress indicators
-            3. Specific achievement criteria
-            4. Regular review points
-            5. Reward systems
-            6. Flexibility options
-            7. Recovery strategies for missed milestones
-            """
-            
-            response = await self.generate_response(prompt)
-            return self._parse_milestones(response)
-            
-        except Exception as e:
-            logger.error(f"Error generating milestones: {str(e)}")
-            return []
+  def create_graph(self) -> Graph:
+      # Create graph
+      workflow = StateGraph(AcademicState)
 
-    async def sync_calendar(self, study_plan: Dict) -> Dict:
-        """Synchronize study plan with calendar"""
-        try:
-            events = self._create_calendar_events(study_plan)
-            return {
-                "status": "success",
-                "events": events,
-                "timestamp": datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Error syncing calendar: {str(e)}")
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+      # Add nodes
+      workflow.add_node("calendar_analyzer", self.calendar_analyzer)
+      workflow.add_node("task_analyzer", self.task_analyzer)
+      workflow.add_node("plan_generator", self.plan_generator)
 
-    def _structure_study_plan(self, text: str) -> Dict:
-        """Parse and structure study plan"""
-        try:
-            
-            return {
-                "sessions": [],
-                "breaks": [],
-                "techniques": [],
-                "checkpoints": [],
-                "rewards": [],
-                "timestamp": datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Error structuring study plan: {str(e)}")
-            return {"error": str(e)}
+      # Define edges
+      workflow.add_edge("calendar_analyzer", "task_analyzer")
+      workflow.add_edge("task_analyzer", "plan_generator")
 
-    def _parse_schedule_optimization(self, text: str) -> Dict:
-        """Parse schedule optimization results"""
-        try:
-            
-            return {
-                "time_blocks": [],
-                "breaks": [],
-                "techniques": [],
-                "contingency_plans": []
-            }
-        except Exception as e:
-            logger.error(f"Error parsing schedule: {str(e)}")
-            return {"error": str(e)}
+      # Set entry point
+      workflow.set_entry_point("calendar_analyzer")
 
-    def _parse_workload_analysis(self, text: str) -> Dict:
-        """Parse workload analysis results"""
-        try:
-            
-            return {
-                "distribution": {},
-                "priorities": [],
-                "effort_estimates": {},
-                "risks": []
-            }
-        except Exception as e:
-            logger.error(f"Error parsing workload: {str(e)}")
-            return {"error": str(e)}
+      # Compile
+      return workflow.compile()
 
-    def _parse_milestones(self, text: str) -> List[Dict]:
-        """Parse milestone data"""
-        try:
-           
-            return [
-                {
-                    "checkpoint": "milestone 1",
-                    "criteria": [],
-                    "rewards": []
-                }
-            ]
-        except Exception as e:
-            logger.error(f"Error parsing milestones: {str(e)}")
-            return []
+  async def calendar_analyzer(self, state: AcademicState) -> AcademicState:
+      """Analyze calendar events"""
+      events = state["calendar"].get("events", [])
+      now = datetime.now(timezone.utc)
+      future = now + timedelta(days=7)
 
-    def _create_calendar_events(self, study_plan: Dict) -> List[Dict]:
-        """Create calendar events from study plan"""
-        try:
-            
-            return []
-        except Exception as e:
-            logger.error(f"Error creating calendar events: {str(e)}")
-            return []
+      filtered_events = [
+          event for event in events
+          if now <= datetime.fromisoformat(event["start"]["dateTime"]) <= future
+      ]
+
+      prompt = """Analyze calendar events and identify:
+      Events: {events}
+
+      Focus on:
+      - Available time blocks
+      - Energy impact of activities
+      - Potential conflicts
+      - Recovery periods
+      - Study opportunity windows
+      - Activity patterns
+      - Schedule optimization
+      """
+
+      messages = [
+          {"role": "system", "content": prompt},
+          {"role": "user", "content": json.dumps(filtered_events)}
+      ]
+
+      response = await self.llm.agenerate(messages)
+      state["results"]["calendar_analysis"] = response
+      return state
+
+  async def task_analyzer(self, state: AcademicState) -> AcademicState:
+      """Analyze tasks and priorities"""
+      tasks = state["tasks"].get("tasks", [])
+
+      prompt = """Analyze tasks and create priority structure:
+      Tasks: {tasks}
+
+      Consider:
+      - Urgency levels
+      - Task complexity
+      - Energy requirements
+      - Dependencies
+      - Required focus levels
+      - Time estimations
+      - Learning objectives
+      - Success criteria
+      """
+
+      messages = [
+          {"role": "system", "content": prompt},
+          {"role": "user", "content": json.dumps(tasks)}
+      ]
+
+      response = await self.llm.agenerate(messages)
+      state["results"]["task_analysis"] = response
+      return state
+
+  async def plan_generator(self, state: AcademicState) -> AcademicState:
+      """Generate final study plan"""
+      profile_analysis = state["results"]["profile_analysis"]
+      calendar_analysis = state["results"]["calendar_analysis"]
+      task_analysis = state["results"]["task_analysis"]
+
+      prompt = f"""AI Planning Assistant: Create focused study plan using ReACT framework.
+
+      INPUT CONTEXT:
+      - Profile Analysis: {profile_analysis}
+      - Calendar Analysis: {calendar_analysis}
+      - Task Analysis: {task_analysis}
+
+      EXAMPLES:
+      {json.dumps(self.few_shot_examples, indent=2)}
+
+      INSTRUCTIONS:
+      1. Follow ReACT pattern:
+        Thought: Analyze situation and needs
+        Action: Consider all analyses
+        Observation: Synthesize findings
+        Plan: Create structured plan
+
+      2. Address:
+        - ADHD management strategies
+        - Energy level optimization
+        - Task chunking methods
+        - Focus period scheduling
+        - Environment switching tactics
+        - Recovery period planning
+        - Social/sport activity balance
+
+      3. Include:
+        - Emergency protocols
+        - Backup strategies
+        - Quick wins
+        - Reward system
+        - Progress tracking
+        - Adjustment triggers
+
+      FORMAT:
+      Thought: [reasoning and situation analysis]
+      Action: [synthesis approach]
+      Observation: [key findings]
+      Plan: [actionable steps and structural schedule]
+      """
+
+      messages = [
+          {"role": "system", "content": prompt},
+          {"role": "user", "content": state["messages"][-1].content}
+      ]
+
+      response = await self.llm.agenerate(messages, temperature=0.7)
+      state["results"]["final_plan"] = response
+      return state
+
+  async def __call__(self, state: AcademicState) -> Dict:
+      """Execute the planning workflow"""
+      # Ensure results dictionary exists
+      if "results" not in state:
+          state["results"] = {}
+      print("-------- PlannerAgent --------")    
+    #   try:
+    #       display(Image(self.workflow.get_graph().draw_mermaid_png()))
+    #   except Exception:
+    #       pass
+
+      # Run the graph
+      final_state = await self.workflow.ainvoke(state)
+    #   print("------------------------------")
+      return {"plan": final_state["results"]["final_plan"]}
